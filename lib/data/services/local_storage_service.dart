@@ -50,7 +50,15 @@ class LocalStorageService {
     }
 
     final box = await Hive.openBox<EventModel>(boxName);
-    final events = box.values.where((event) => event.name == keyword).toList();
+    if (box.isEmpty) {
+      await box.close();
+      return []; // No cached data available
+    }
+
+    final events = box.values
+        .where(
+            (event) => event.name.toLowerCase().contains(keyword.toLowerCase()))
+        .toList();
     await box.close();
     return events;
   }
