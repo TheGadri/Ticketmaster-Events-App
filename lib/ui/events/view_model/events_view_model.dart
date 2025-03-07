@@ -1,10 +1,10 @@
+import 'dart:async';
+
 import '../../../data/models/event_model.dart';
 import '../../../data/repositories/events_repository.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/services/local_storage_service.dart';
 import '../../../utils/connectivity_service.dart';
-
-import 'dart:async';
 
 import 'events_state.dart';
 
@@ -71,23 +71,14 @@ class EventsViewModel implements EventsRepository {
       }
     });
 
-    try {
-      final newEvents = await getEvents(
-        keyword: _searchQuery,
-        page: _currentPage,
-        forceRefresh: refresh,
-      );
+    final newEvents = await getEvents(
+      keyword: _searchQuery,
+      page: _currentPage,
+      forceRefresh: refresh,
+    );
 
-      _events.addAll(newEvents);
-      _isLoading = false;
-    } catch (e) {
-      _isLoading = false;
-
-      // Fallback to cached data
-      final cachedEvents =
-          await _localStorageService.getCachedEvents(keyword: _searchQuery);
-      _events.addAll(cachedEvents);
-    }
+    _events.addAll(newEvents);
+    _isLoading = false;
 
     _emitCurrentState();
   }
