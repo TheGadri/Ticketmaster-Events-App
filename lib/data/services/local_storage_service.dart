@@ -1,29 +1,20 @@
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import '../models/event_model.dart';
 
 class LocalStorageService {
-  static const String _boxNamePrefix = 'events_cache';
-
-  // Helper method to get box name based on query
-  String _getBoxName(String keyword) {
-    return keyword.isEmpty
-        ? _boxNamePrefix
-        : '${_boxNamePrefix}_${keyword.toLowerCase().replaceAll(' ', '_')}';
-  }
+  static const String _eventsCacheboxName = 'events_cache';
 
   Future<void> cacheEvents(List<EventModel> events,
       {String keyword = ''}) async {
-    final boxName = _getBoxName(keyword);
-    final box = await Hive.openBox<EventModel>(boxName);
-    await box.clear(); // Clear previous cache for this query
+    final box = await Hive.openBox<EventModel>(_eventsCacheboxName);
     await box.addAll(events);
     await box.close();
   }
 
   Future<void> appendToCachedEvents(List<EventModel> events,
       {String keyword = ''}) async {
-    final boxName = _getBoxName(keyword);
-    final box = await Hive.openBox<EventModel>(boxName);
+    final box = await Hive.openBox<EventModel>(_eventsCacheboxName);
 
     // Add only events that don't already exist in the box
     final existingIds = box.values.map((event) => event.id).toSet();
@@ -35,32 +26,29 @@ class LocalStorageService {
   }
 
   Future<List<EventModel>> getCachedEvents({String keyword = ''}) async {
-    final boxName = _getBoxName(keyword);
-
-    // Check if box exists
-    if (!Hive.isBoxOpen(boxName) && !await Hive.boxExists(boxName)) {
-      // If no cached data exists for this query, try to return the general cache
-      if (keyword.isNotEmpty && await Hive.boxExists(_boxNamePrefix)) {
-        final generalBox = await Hive.openBox<EventModel>(_boxNamePrefix);
-        final events = generalBox.values.toList();
-        await generalBox.close();
-        return events;
+    final box = await Hive.openBox<EventModel>(_eventsCacheboxName);
+    try {
+      if (box.isEmpty) {
+        return []; // No cached data available
       }
-      return []; // No cached data available
-    }
 
-    final box = await Hive.openBox<EventModel>(boxName);
-    if (box.isEmpty) {
+      if (keyword.isEmpty) {
+        return box.values.toList();
+      }
+
+      // Filter events by keyword (case-insensitive)
+      final keywordLower = keyword.toLowerCase();
+      return box.values
+          .where((event) => event.name.toLowerCase().contains(keywordLower))
+          .toList();
+    } catch (e) {
+      // Handle any errors that occur during the process
+      debugPrint('Error fetching cached events: $e');
+      return [];
+    } finally {
+      // Ensure the box is always closed
       await box.close();
-      return []; // No cached data available
     }
-
-    final events = box.values
-        .where(
-            (event) => event.name.toLowerCase().contains(keyword.toLowerCase()))
-        .toList();
-    await box.close();
-    return events;
   }
 
   Future<void> clearCache() async {
