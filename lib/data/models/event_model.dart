@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
 part 'event_model.g.dart';
@@ -6,25 +7,25 @@ part 'event_model.g.dart';
 class EventModel {
   @HiveField(0)
   final String id;
-  
+
   @HiveField(1)
   final String name;
-  
+
   @HiveField(2)
   final String date;
-  
+
   @HiveField(3)
   final String time;
-  
+
   @HiveField(4)
   final String venue;
-  
+
   @HiveField(5)
   final String imageUrl;
-  
+
   @HiveField(6)
   final String description;
-  
+
   @HiveField(7)
   final String ticketUrl;
 
@@ -41,16 +42,19 @@ class EventModel {
 
   factory EventModel.fromJson(Map<String, dynamic> json) {
     final dates = json['dates']['start'];
-    final venue = json['_embedded']['venues'][0];
-    
+    final venue = json['_embedded'] == null
+        ? json['place']['address']['line1']
+        : json['_embedded']['venues'][0]['name'] ?? 'Unknown Venue';
+
     return EventModel(
       id: json['id'],
       name: json['name'],
       date: dates['localDate'] ?? 'TBA',
       time: dates['localTime'] ?? 'TBA',
-      venue: venue['name'] ?? 'Unknown Venue',
+      venue: venue,
       imageUrl: json['images'][0]['url'] ?? '',
-      description: json['info'] ?? json['description'] ?? 'No description available',
+      description:
+          json['info'] ?? json['description'] ?? 'No description available',
       ticketUrl: json['url'] ?? '',
     );
   }
